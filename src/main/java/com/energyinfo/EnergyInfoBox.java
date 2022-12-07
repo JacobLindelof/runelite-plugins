@@ -29,10 +29,15 @@ class EnergyInfoBox extends InfoBox
         setPriority(InfoBoxPriority.HIGH);
     }
 
+    public Integer getRunEnergyPercentage()
+    {
+        return (int) (client.getEnergy() / 100);
+    }
+
     @Override
     public String getText()
     {
-        return String.valueOf(client.getEnergy()) + '%';
+        return String.valueOf(getRunEnergyPercentage()) + '%';
     }
 
     @Override
@@ -42,7 +47,7 @@ class EnergyInfoBox extends InfoBox
         {
             return STAMINA_ACTIVE;
         }
-        if (config.lowEnergyThreshold() > 0 & client.getEnergy() < config.lowEnergyThreshold())
+        if (config.lowEnergyThreshold() > 0 & getRunEnergyPercentage() < config.lowEnergyThreshold())
         {
             return BELOW_THRESHOLD;
         }
