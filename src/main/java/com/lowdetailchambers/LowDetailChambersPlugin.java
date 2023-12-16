@@ -5,6 +5,7 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.VarPlayer;
 import net.runelite.api.Varbits;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.callback.ClientThread;
@@ -36,6 +37,8 @@ public class LowDetailChambersPlugin extends Plugin
 	@Inject
 	private ConfigManager configManager;
 
+	private boolean lowDetailEnabled = false;
+
 	@Override
 	protected void startUp() throws Exception
 	{
@@ -43,9 +46,10 @@ public class LowDetailChambersPlugin extends Plugin
 		{
 			if (client.getGameState().getState() >= GameState.LOGIN_SCREEN.getState())
 			{
-				if (client.getVarbitValue(Varbits.IN_RAID) == 1 && lowDetailDisabled())
+				if (insideChambersOfXeric() && lowDetailDisabled() && !lowDetailEnabled)
 				{
 					client.changeMemoryMode(true);
+					lowDetailEnabled = true;
 				}
 				return true;
 			}
@@ -58,9 +62,10 @@ public class LowDetailChambersPlugin extends Plugin
 	{
 		clientThread.invoke(() ->
 		{
-			if (lowDetailDisabled())
+			if (lowDetailDisabled() && lowDetailEnabled)
 			{
 				client.changeMemoryMode(false);
+				lowDetailEnabled = false;
 			}
 		});
 	}
@@ -68,18 +73,27 @@ public class LowDetailChambersPlugin extends Plugin
 	@Subscribe
 	public void onVarbitChanged(VarbitChanged event)
 	{
-		if (event.getVarbitId() == Varbits.IN_RAID && lowDetailDisabled())
+		if (event.getVarbitId() == Varbits.IN_RAID || event.getVarpId() == VarPlayer.IN_RAID_PARTY)
 		{
-			if (event.getValue() == 1)
+			if (!lowDetailDisabled())
 			{
-				client.changeMemoryMode(true);
-
+				return;
 			}
-			else
+
+			boolean inRaidChambers = insideChambersOfXeric();
+			if (inRaidChambers != lowDetailEnabled)
 			{
-				client.changeMemoryMode(false);
+				client.changeMemoryMode(inRaidChambers);
+				lowDetailEnabled = inRaidChambers;
 			}
 		}
+	}
+
+	private boolean insideChambersOfXeric()
+	{
+		int raidPartyID = client.getVarpValue(VarPlayer.IN_RAID_PARTY);
+		boolean inRaidChambers = client.getVarbitValue(Varbits.IN_RAID) == 1;
+		return raidPartyID != -1 && inRaidChambers;
 	}
 
 	private boolean lowDetailDisabled()
